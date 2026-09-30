@@ -1,0 +1,52 @@
+{
+ "ust": {
+  "as_of": "2026-07-22",
+  "source": "U.S. Treasury Daily Par Yield Curve Rates",
+  "par_yield_pct": {
+   "1M": 3.79,
+   "2M": 3.84,
+   "3M": 3.82,
+   "4M": 3.92,
+   "6M": 3.98,
+   "1Y": 4.04,
+   "2Y": 4.23,
+   "3Y": 4.3,
+   "5Y": 4.38,
+   "7Y": 4.52,
+   "10Y": 4.68,
+   "20Y": 5.22,
+   "30Y": 5.21
+  }
+ },
+ "krw_irs": {
+  "as_of": "2026-08-05",
+  "source": "SMBS KRW IRS mid quotes; CD 91D",
+  "cd91": 0.0293,
+  "mid_swap": {
+   "1": 0.03365,
+   "2": 0.0362,
+   "3": 0.03725,
+   "4": 0.03785,
+   "5": 0.038325
+  },
+  "notional": 100000000000,
+  "maturity": 5,
+  "accrual": 0.25,
+  "fixed_rate": 0.039
+ },
+ "ktb": {
+  "name": "국고채권 04250-3606(26-6)",
+  "isin": "KR103503GG60",
+  "maturity": "2036-06-10",
+  "coupon_pct": 4.25,
+  "freq": 2,
+  "par": 10000,
+  "settlement": "2026-07-30",
+  "ytm_pct": 4.311,
+  "notional": 10000000000,
+  "confidence": 0.99,
+  "holding_days": 1,
+  "daily_vol_bp": 4.8146501585451285,
+  "n_yield_obs": 234
+ }
+}
