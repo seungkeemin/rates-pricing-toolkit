@@ -44,3 +44,15 @@ def test_ktb_risk_and_var(inputs, excel):
     var = delta_normal_var(r.dv01, b["daily_vol_bp"], b["confidence"], b["holding_days"])
     np.testing.assert_allclose(var, e["var"], rtol=1e-9)
     np.testing.assert_allclose(var / (b["notional"] / b["par"] * r.dirty), e["var_ratio"], atol=1e-9)
+
+
+def test_daily_vol_from_yield_series_matches_excel_stdev(inputs):
+    import csv
+    from pathlib import Path
+
+    from ratestool import daily_vol_bp
+
+    path = Path(__file__).parent / "fixtures" / "ktb_yields.csv"
+    ys = [float(r["yield_pct"]) for r in csv.DictReader(path.open(encoding="utf-8"))]
+    assert len(ys) == inputs["ktb"]["n_yield_obs"]
+    np.testing.assert_allclose(daily_vol_bp(ys), inputs["ktb"]["daily_vol_bp"], rtol=1e-12)

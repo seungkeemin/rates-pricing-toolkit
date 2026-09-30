@@ -39,12 +39,13 @@ rates-pricing-toolkit/
 ├── scripts/report.py     Python 결과와 Excel 답안을 나란히 출력, 그림 생성
 ├── tests/
 │   ├── fixtures/inputs.json           과제 입력값
+│   ├── fixtures/ktb_yields.csv        국고채 금리 시계열 (VaR 변동성)
 │   └── fixtures/excel_expected.json   Excel 답안 결과값 (기준값)
 └── figures/
 ```
 
 - 계산은 NumPy 배열 연산이고, 금리 라이브러리(QuantLib 등)는 쓰지 않았습니다.
-- 국고채 금리 시계열(234일)은 저장소에 넣지 않았습니다. VaR 테스트는 그 시계열로 계산한 일간 변동성 4.8147bp를 입력으로 씁니다. 시계열이 있으면 `daily_vol_bp`로 같은 값을 다시 구할 수 있고, 로컬에서 Excel의 STDEV와 같은 값이 나오는 것을 확인했습니다.
+- 국고채 금리 시계열(234일, `tests/fixtures/ktb_yields.csv`)은 과제 파일에 들어 있던 값입니다. 여기서 계산한 일간 변동성 4.8147bp가 Excel의 STDEV와 같은지 테스트로 확인합니다.
 
 ## 실행 결과
 
@@ -105,5 +106,5 @@ python scripts/report.py
 
 | 테스트 | 확인 내용 |
 |---|---|
-| `test_against_excel.py` | UST DF·zero rate, KRW IRS DF·선도금리·공정금리·레그 PV, 국고채 가격·듀레이션·컨벡시티·DV01, VaR가 Excel 답안과 일치 |
+| `test_against_excel.py` | UST DF·zero rate, KRW IRS DF·선도금리·공정금리·레그 PV, 국고채 가격·듀레이션·컨벡시티·DV01, 금리 시계열의 일간 변동성, VaR가 Excel 답안과 일치 |
 | `test_properties.py` | par 호가 재현, 공정 금리에서 가치 0, 변동 레그 = 1 − DF(T), 평평한 커브, 표본 표준편차 정의 |
