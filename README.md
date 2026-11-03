@@ -1,34 +1,98 @@
 # rates-pricing-toolkit
 
-> **English summary.** Ports three rates assignments I first solved in Excel (UST zero curve bootstrapping, KRW IRS valuation, KTB duration / DV01 / convexity and delta-normal VaR) to Python and tests the results against my own Excel answers to six decimal places. The comparison exposed that Excel Solver had stopped at a 5Y swap rate of 3.8324965% instead of the 3.8325% quote, a KRW 16k difference on a KRW 100bn swap.
+> **English summary.** Three rates problems I first solved in Excel, ported to Python and checked against my Excel answers to six decimal places. (1) A bank quotes a 5Y KRW pay-fixed IRS at 3.90% when the fair swap rate from the CD and IRS curve is 3.8325%: the 6.75bp gap makes the swap worth about −KRW 307m to the fixed payer on KRW 100bn notional from day one. (2) A KRW 10bn position in KTB 26-6 has a DV01 of about KRW 7.95m per bp and a 1-day 99% delta-normal VaR of about KRW 89m; in the actual 233 daily moves, the 99% threshold was breached 6 times (2.6%), so the normal assumption understates the tail. (3) A UST zero curve bootstrapped from par yields. The Excel comparison also showed that Solver had stopped at a 5Y swap rate of 3.8324965% instead of the 3.8325% quote.
 
-Excel로 풀었던 금리 상품 실습과제 세 개를 Python으로 옮기고, 결과가 제 Excel 답안과 소수점 6자리까지 같은지 테스트로 확인합니다. 미 국채 zero curve, 원화 IRS 가치평가, 국고채 듀레이션·DV01·컨벡시티, Delta-Normal VaR를 다룹니다.
+KRW IRS 제시금리 평가, 국고채 포지션의 금리 리스크, 미 국채 zero curve를 Excel로 풀고 Python으로 옮겨 결과를 대조했습니다.
+
+![KRW IRS 제시금리와 공정 스왑금리](figures/krw_irs_trade.png)
+
+## 한눈에 보기
+
+| | |
+|---|---|
+| **무엇을** | U.FE.A 금융공학학회 실습과제로 Excel에서 푼 금리 과제 3개를 Python으로 옮기고, 결과가 Excel 답안과 같은지 확인 |
+| **KRW IRS** | 은행 제시 고정금리 3.90%는 공정 스왑금리 3.8325%보다 6.75bp 높음. 고정금리를 내는 쪽(명목 1,000억 원, 5년)은 계약 시점에 약 −3.07억 원 |
+| **국고채 리스크** | 국고 26-6 100억 원: Modified Duration 7.94, DV01 약 795만 원/bp, 1일 99% VaR 약 8,902만 원. 실제 233일 중 6일(2.6%)이 99% 기준을 넘어 정규분포 가정이 꼬리 위험을 작게 잡음 |
+| **UST 커브** | 2026-07-22 par yield로 10년 zero curve를 만들고, 10년 zero rate 4.67% |
+| **검증** | 금리와 할인계수는 Excel 답안과 소수점 6자리까지 같음. Excel Solver가 5년 스왑금리를 호가보다 미세하게 낮은 곳에서 멈춘 것을 찾음 |
+| **역할** | 과제 풀이(Excel)와 Python 이식·검증 |
+
+## 1. KRW IRS: 은행이 제시한 금리는 공정한가
+
+**상황.** 2026-08-05, A사가 은행과 5년 KRW IRS를 맺습니다. A사는 고정금리 3.90%를 내고 CD 91일 금리를 받습니다. 명목금액 1,000억 원, 분기 지급입니다.
+
+**한 일.** CD 91일과 서울외국환중개 IRS 1~5년 Mid 호가로 할인 커브를 부트스트랩하고, 그 커브에서 고정 레그와 변동 레그의 현재가치를 계산했습니다.
+
+**결과.** 5년 공정 스왑금리는 시장 호가와 같은 3.8325%입니다. 은행 제시금리는 이보다 6.75bp 높습니다.
+
+| 항목 | 값 |
+|---|---:|
+| 고정 레그 PV (A사가 낼 돈) | 177.17억 원 |
+| 변동 레그 PV (A사가 받을 돈) | 174.11억 원 |
+| A사 입장의 스왑 가치 | **−3.07억 원** |
+
+A사는 계약하는 순간 약 3억 원을 잃는 거래입니다. 은행 입장에서는 이 6.75bp가 헤지 비용과 신용위험, 마진을 덮는 스프레드입니다.
+
+## 2. 국고채 100억 원을 들고 있으면 하루에 얼마까지 잃을 수 있나
+
+**상황.** 2026-07-30 결제로 국고채권 04250-3606(26-6, 2036년 만기, 표면금리 4.25%)을 수익률 4.311%에 100억 원 보유합니다.
+
+![국고채 VaR](figures/ktb_var.png)
+
+| 항목 | 값 |
+|---|---:|
+| 가격 (액면 10,000원당, dirty) | 10,006.27원 |
+| Macaulay / Modified Duration | 8.11 / 7.94 |
+| Convexity | 75.34 |
+| DV01 (명목 100억) | 7,947,728원 |
+| 금리 일간 변동성 (최근 234일) | 4.81bp |
+| 1일 99% VaR | 89,018,937원 |
+
+금리가 1bp 오르면 약 795만 원을 잃습니다. Delta-Normal 방식으로는 하루 동안 99% 확률로 손실이 약 8,900만 원을 넘지 않습니다. 같은 기간 실제 일간 변동을 보면 233일 중 6일(2.6%)이 99% 기준인 11.2bp보다 크게 올랐습니다. 정규분포라면 1%, 약 2일이어야 합니다. 정규분포 가정이 큰 금리 상승의 빈도를 작게 잡는다는 뜻이라, 실제로 쓴다면 역사적 시뮬레이션 VaR나 스트레스 테스트를 함께 봐야 합니다.
+
+## 3. 미 국채 zero curve
 
 ![UST curve](figures/ust_curve.png)
 
-## 과제 개요
+2026-07-22 미 재무부 par yield(6개월~10년)로 할인계수와 연속복리 zero rate를 부트스트랩했습니다. 10년 zero rate는 4.672346%입니다. 그림에서 zero rate가 par yield보다 낮게 보이는 것은 복리 기준이 달라서입니다. par yield는 반기 복리, zero rate는 연속복리입니다.
 
-U.FE.A 금융공학 학회 실습과제로 Excel에서 풀었던 것들입니다. 원본은 제가 제출한 답안 파일만 썼고 강사 모범답안은 쓰지 않았습니다.
+## Excel 답안과 대조
 
-| 과제 | 기준일 | 내용 |
-|---|---|---|
-| UST Zero Curve Bootstrapping | 2026-07-22 | 미 국채 par yield로 할인계수와 zero rate(연속복리) 산출 |
-| KRW IRS Pricing | 2026-08-05 | CD 91일과 IRS 1~5년 호가로 커브를 만들고 5년 pay-fixed IRS(계약금리 3.90%) 평가 |
-| KTB Duration, Convexity, VaR | 2026-07-30 | 국고채권 04250-3606(26-6)의 가격, 듀레이션, DV01, 컨벡시티, 1일 99% VaR |
+| 항목 | Python | Excel 답안 |
+|---|---:|---:|
+| UST zero 10Y | 4.672346% | 4.672346% |
+| KRW 5Y 공정 스왑금리 | 3.8325000% | 3.8324965% |
+| A사 IRS 가치 | −306,645,128원 | −306,660,906원 |
+| 국고채 Modified Duration | 7.942749 | 7.942749 |
+| DV01 (명목 100억) | 7,947,728원 | 7,947,728원 |
+| 1일 99% VaR | 89,018,937원 | 89,018,937원 |
 
-Excel은 셀마다 식을 확인하기는 좋지만 가정을 바꿔 다시 돌리거나 결과가 맞는지 자동으로 검증하기 어렵습니다. 식을 함수로 옮기고 Excel 결과를 기준값으로 테스트를 걸어 두면 둘 중 어느 쪽이 틀려도 드러납니다.
+할인계수와 금리는 모든 지점에서 1e-6 안쪽으로 같고, 국고채와 VaR는 완전히 같습니다.
 
-## 접근 방식
+**IRS 가치가 1.6만 원 달랐던 이유.** Excel Solver가 5년 스왑금리를 호가 3.8325%가 아니라 3.8324965%에서 멈춰 있었습니다. 할인계수 차이는 7e-07에 불과하지만 명목 1,000억 원에 곱해지면 약 1.6만 원이 됩니다. Python은 모든 호가를 1e-12 안쪽으로 재현합니다.
 
-Excel과 같은 가정을 그대로 옮겼습니다. 결과가 다르면 옮기는 과정의 실수인지 Excel 쪽 문제인지 따져 보기 위해서입니다.
+**"최근 250영업일"이 234일이었던 이유.** 시작일을 Excel WORKDAY로 잡았는데, WORKDAY는 한국 공휴일을 빼지 않습니다. 실제 금리가 있는 날은 234일입니다.
 
-- **부트스트랩.** 시장 호가가 있는 만기(노드)의 할인계수를 par 조건으로 하나씩 풉니다. 노드 사이 지급일의 할인계수는 ln DF 선형(log-linear) 보간입니다. 새 노드를 풀 때 그 사이 지급일의 DF도 새 노드에 따라 바뀌므로, 보간까지 포함한 par 조건을 `brentq`로 풉니다. Excel에서는 Solver로 같은 일을 했습니다.
+## 한계
+
+- UST 6개월·1년은 호가 수익률을 그대로 연속복리 zero rate로 쓴 과제 가정을 따랐습니다. 복리 기준을 맞추면 단기 구간이 조금 달라집니다.
+- IRS는 단일 커브, 이자 기간 0.25년 고정, 영업일 조정 없음으로 단순화했습니다. 실제 원화 IRS 평가는 할인 커브와 예측 커브를 나누고 실제 이자 일수를 씁니다.
+- 다음 단계로 KRD(Key Rate Duration)와 할인·예측 이중 커브를 붙일 수 있습니다.
+
+<details>
+<summary><b>구현 세부 (계산 방식, 코드 구조, 실행 방법, 검증)</b></summary>
+
+### 계산 방식
+
+Excel과 같은 가정을 그대로 옮겼습니다. 결과가 다르면 옮기는 과정의 실수인지 Excel 쪽 문제인지 가려내기 위해서입니다.
+
+- **부트스트랩.** 시장 호가가 있는 만기의 할인계수를 par 조건으로 하나씩 풉니다. 그 사이 지급일은 ln DF 선형 보간입니다. 보간까지 포함한 par 조건을 `brentq`로 풉니다(Excel에서는 Solver).
 - **UST.** 6M과 1Y는 호가 수익률을 그대로 연속복리 zero rate로 두고, 2Y~10Y는 반기 이표 par 채권 조건 (y/2)·ΣDF + DF(T) = 1로 풉니다.
-- **KRW IRS.** 0.25년 DF는 CD 91일(단리)로 정하고, 1Y~5Y는 분기 지급 par swap 조건으로 풉니다. 단일 커브(할인과 CD 선도금리 예측에 같은 커브), accrual 0.25 고정입니다.
-- **국고채.** 결제일 이후 이표일마다 t = 일수/365, DF = 1/(1 + y/2)^(2t)로 할인합니다. 듀레이션과 컨벡시티는 이 현금흐름에서 직접 계산합니다.
-- **VaR.** 금리 일간 변동(bp)의 표본 표준편차 × z(99%) × DV01 × √1일입니다.
+- **KRW IRS.** 0.25년 DF는 CD 91일(단리), 1Y~5Y는 분기 지급 par swap 조건. 단일 커브, accrual 0.25 고정.
+- **국고채.** 결제일 이후 이표일마다 t = 일수/365, DF = 1/(1 + y/2)^(2t)로 할인합니다.
+- **VaR.** 금리 일간 변동(bp)의 표본 표준편차 × z(99%) × DV01 × √1일.
 
-## 구현
+### 코드 구조
 
 ```
 rates-pricing-toolkit/
@@ -46,10 +110,9 @@ rates-pricing-toolkit/
 └── figures/
 ```
 
-- 계산은 NumPy 배열 연산이고, 금리 라이브러리(QuantLib 등)는 쓰지 않았습니다.
-- 국고채 금리 시계열(234일, `tests/fixtures/ktb_yields.csv`)은 과제 파일에 들어 있던 값입니다. 여기서 계산한 일간 변동성 4.8147bp가 Excel의 STDEV와 같은지 테스트로 확인합니다.
+계산은 NumPy 배열 연산이고, 금리 라이브러리(QuantLib 등)는 쓰지 않았습니다.
 
-## 실행 결과
+### 전체 대조표
 
 `python scripts/report.py` 출력입니다.
 
@@ -68,23 +131,7 @@ rates-pricing-toolkit/
 | DV01 (원, 명목 100억) | 7,947,728.23 | 7,947,728.23 | 0 |
 | 1일 99% VaR (원) | 89,018,937 | 89,018,937 | 0 |
 
-할인계수와 금리는 모든 지점에서 Excel과 1e-6 안쪽으로 같습니다(UST DF 최대 차이 9.7e-09, KRW IRS DF 최대 차이 7.0e-07). 국고채와 VaR는 식이 닫힌 형태라 완전히 같습니다.
-
-## 결과 분석
-
-은행이 제시한 계약금리 3.90%는 공정 스왑금리 3.8325%보다 6.75bp 높습니다. 고정금리를 내는 A사 입장에서는 계약 시점부터 약 3억 원 손해인 거래입니다.
-
-그림에서 zero rate가 par yield보다 낮게 그려지는 것은 복리 기준이 달라서입니다. par yield는 반기 복리, zero rate는 연속복리입니다. 2Y par 4.23%를 연속복리로 바꾸면 4.186%로 zero rate 4.189%보다 조금 낮습니다. 우상향 커브에서 zero가 par보다 높다는 관계는 같은 복리 기준에서 성립합니다.
-
-**한계.** UST 6M·1Y는 호가 수익률(bond-equivalent)을 그대로 연속복리 zero rate로 쓴 과제 가정을 따랐습니다. 복리 기준을 맞추면 단기 구간이 조금 달라집니다. IRS는 단일 커브, accrual 0.25 고정, 영업일 조정 없음으로 단순화했습니다. 실제 원화 IRS 평가에서는 할인과 예측 커브를 나누고 실제 이자 일수를 씁니다.
-
-## 이슈 기록
-
-**Excel Solver가 호가를 정확히 재현하지 않음.** IRS 커브를 Excel Solver로 풀었을 때 5년 par swap rate가 호가 3.8325%가 아니라 3.8324965%로 멈춰 있었습니다. Python은 모든 호가를 1e-12 안쪽으로 재현합니다. 할인계수 차이는 7e-07에 불과하지만 명목 1,000억 원에 곱해지면 IRS 가치에서 약 1.6만 원 차이가 납니다. 테스트는 금리와 DF를 소수점 6자리로, 원화 금액은 상대오차로 비교합니다.
-
-**"최근 250영업일" 시계열이 234일.** 시작일을 WORKDAY(결제일, −250)로 잡았지만 WORKDAY는 한국 공휴일을 모르고, 실제 금리가 있는 날만 남기면 234일입니다. 표준편차는 233개 일간 변동으로 계산됩니다.
-
-## 실행 방법
+### 실행 방법
 
 Python 3.10 이상.
 
@@ -96,11 +143,9 @@ python scripts/report.py
 
 그림까지 다시 그리려면 `pip install matplotlib`이 필요합니다.
 
-## 개발 방식
+### 개발 방식과 검증
 
-과제 풀이와 Excel 답안은 직접 작성했습니다. Python 이식과 테스트, 이 README는 Claude Code로 작성했습니다.
-
-검증은 이렇게 했습니다.
+과제 풀이와 Excel 답안은 직접 작성했습니다. Python 이식과 테스트, README는 Claude Code로 작성했습니다.
 
 - Excel 파일에서 입력값과 결과값을 코드로 추출해 fixture로 두고, 셀 수식을 하나씩 확인하며 같은 가정으로 옮겼습니다.
 - Excel과 다른 값이 나온 곳(IRS 금액)은 원인을 Solver 잔차로 확인한 뒤에 허용 오차를 정했습니다.
@@ -110,3 +155,5 @@ python scripts/report.py
 |---|---|
 | `test_against_excel.py` | UST DF·zero rate, KRW IRS DF·선도금리·공정금리·레그 PV, 국고채 가격·듀레이션·컨벡시티·DV01, 금리 시계열의 일간 변동성, VaR가 Excel 답안과 일치 |
 | `test_properties.py` | par 호가 재현, 공정 금리에서 가치 0, 변동 레그 = 1 − DF(T), 평평한 커브, 표본 표준편차 정의 |
+
+</details>
