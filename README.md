@@ -2,20 +2,9 @@
 
 > **English summary.** Three rates problems I first solved in Excel, ported to Python and checked against my Excel answers to six decimal places. (1) A bank quotes a 5Y KRW pay-fixed IRS at 3.90% when the fair swap rate from the CD and IRS curve is 3.8325%: the 6.75bp gap makes the swap worth about −KRW 307m to the fixed payer on KRW 100bn notional from day one. (2) A KRW 10bn position in KTB 26-6 has a DV01 of about KRW 7.95m per bp and a 1-day 99% delta-normal VaR of about KRW 89m; in the actual 233 daily moves, the 99% threshold was breached 6 times (2.6%), so the normal assumption understates the tail. (3) A UST zero curve bootstrapped from par yields. The Excel comparison also showed that Solver had stopped at a 5Y swap rate of 3.8324965% instead of the 3.8325% quote.
 
-KRW IRS 제시금리 평가, 국고채 포지션의 금리 리스크, 미 국채 zero curve를 Excel로 풀고 Python으로 옮겨 결과를 대조했습니다.
+KRW IRS 제시금리 평가, 국고채 포지션의 금리 리스크, 미 국채 zero curve를 U.FE.A 금융공학학회 실습과제로 Excel에서 풀고, Python으로 옮겨 결과를 대조했습니다.
 
 ![KRW IRS 제시금리와 공정 스왑금리](figures/krw_irs_trade.png)
-
-## 한눈에 보기
-
-| | |
-|---|---|
-| **무엇을** | U.FE.A 금융공학학회 실습과제로 Excel에서 푼 금리 과제 3개를 Python으로 옮기고, 결과가 Excel 답안과 같은지 확인 |
-| **KRW IRS** | 은행 제시 고정금리 3.90%는 공정 스왑금리 3.8325%보다 6.75bp 높음. 고정금리를 내는 쪽(명목 1,000억 원, 5년)은 계약 시점에 약 −3.07억 원 |
-| **국고채 리스크** | 국고 26-6 100억 원: Modified Duration 7.94, DV01 약 795만 원/bp, 1일 99% VaR 약 8,902만 원. 실제 233일 중 6일(2.6%)이 99% 기준을 넘어 정규분포 가정이 꼬리 위험을 작게 잡음 |
-| **UST 커브** | 2026-07-22 par yield로 10년 zero curve를 만들고, 10년 zero rate 4.67% |
-| **검증** | 금리와 할인계수는 Excel 답안과 소수점 6자리까지 같음. Excel Solver가 5년 스왑금리를 호가보다 미세하게 낮은 곳에서 멈춘 것을 찾음 |
-| **역할** | 과제 풀이(Excel)와 Python 이식·검증 |
 
 ## 1. KRW IRS: 은행이 제시한 금리는 공정한가
 
